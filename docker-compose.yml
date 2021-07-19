@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+    rundeck:
+        # image: rundeck/rundeck:SNAPSHOT
+        build: .
+        environment:
+            RUNDECK_DATABASE_DRIVER: org.mariadb.jdbc.Driver
+            RUNDECK_DATABASE_USERNAME: rundeck
+            RUNDECK_DATABASE_URL: jdbc:mysql://db/rundeck?autoReconnect=true&useSSL=false
+            RUNDECK_GRAILS_URL: <URL/IP>
+            RUNDECK_SERVER_ADDRESS: 0.0.0.0
+        hostname: rundeck-acc           
+        volumes:
+          - ./realm.properties:/home/rundeck/server/config/realm.properties
+          - rundeck-data:/home/rundeck/persistent
+            #user: root        
+        env_file: 
+          - .my.env
+        ports:
+          - 80:4440
+        restart: unless-stopped
+        depends_on:
+          - db  
+
+    db:
+        image: mysql:5.7
+        expose:
+          - 3306
+        environment:
+          - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/mysql_secret
+          - MYSQL_DATABASE=rundeck
+          - MYSQL_USER=rundeck
+          - MYSQL_PASSWORD_FILE=/run/secrets/mysql_secret
+        volumes:
+          - dbdata:/var/lib/mysql
+        restart: unless-stopped
+        secrets:
+          - mysql_secret      
+
+volumes:
+  rundeck-data:
+    driver: local-persist
+    driver_opts:
+      mountpoint: /persistent/rundeck
+  dbdata:
+    driver: local-persist
+    driver_opts:
+      mountpoint: /persistent/mysql
+
+secrets:
+  mysql_secret:
+    file: .donot
